@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conversion Auditor</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .lead { background: #22c55e; }
+        .section { background: #3b82f6; }
+        .outreach { background: #a855f7; }
+        .deep { background: #f97316; }
+
+        #result {
+            background: #020617;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Conversion Auditor (Private)</h1>
+
+<textarea id="input" placeholder="Paste copy here..."></textarea>
+
+<div>
+    <button class="lead" onclick="runLeadgen()">LeadGen</button>
+    <button class="section" onclick="runSection()">Section Rewrite</button>
+    <button class="outreach" onclick="runOutreach()">Outreach</button>
+    <button class="deep" onclick="runDeep()">Deep Audit</button>
+</div>
+
+<div id="result">Result will appear here...</div>
+
+<script>
+
+const API = "http://127.0.0.1:8000";
+
+async function runLeadgen() {
+    callAPI("/leadgen", {
+        input_copy: getInput(),
+        goal: "lead_capture"
+    });
+}
+
+async function runSection() {
+    callAPI("/section-rewrite", {
+        section_copy: getInput()
+    });
+}
+
+async function runOutreach() {
+    callAPI("/outreach", {
+        context_input: getInput(),
+        channel: "email"
+    });
+}
+
+async function runDeep() {
+    callAPI("/deep-dive", {
+        full_copy: getInput()
+    });
+}
+
+function getInput() {
+    return document.getElementById("input").value;
+}
+
+async function callAPI(endpoint, data) {
+    setResult("Thinking...");
+
+    try {
+        const res = await fetch(API + endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        const json = await res.json();
+        setResult(json.result || JSON.stringify(json, null, 2));
+
+    } catch (err) {
+        setResult("Error: " + err.message);
+    }
+}
+
+function setResult(text) {
+    document.getElementById("result").innerText = text;
+}
+
+</script>
+
+</body>
+</html>
