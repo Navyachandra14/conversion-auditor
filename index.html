@@ -10,13 +10,9 @@
             padding: 40px;
         }
 
-        h1 {
-            text-align: center;
-        }
-
         textarea {
             width: 100%;
-            height: 200px;
+            height: 180px;
             padding: 15px;
             font-size: 16px;
             border-radius: 8px;
@@ -33,24 +29,39 @@
             font-weight: bold;
         }
 
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .lead { background: #22c55e; }
-        .section { background: #3b82f6; }
+        .section { background: #ef4444; }
         .outreach { background: #a855f7; }
         .deep { background: #f97316; }
 
-        #result {
+        #resultBox {
             background: #020617;
             padding: 20px;
             border-radius: 8px;
             margin-top: 20px;
-            white-space: pre-wrap;
+        }
+
+        #loading {
+            color: #38bdf8;
+            margin-top: 10px;
+            display: none;
+        }
+
+        #copyBtn {
+            margin-top: 10px;
+            background: #2563eb;
         }
     </style>
 </head>
 
 <body>
 
-<h1>Conversion Auditor </h1>
+<h2>Conversion Auditor</h2>
 
 <textarea id="input" placeholder="Paste copy here..."></textarea>
 
@@ -61,11 +72,65 @@
     <button class="deep" onclick="runDeep()">Deep Audit</button>
 </div>
 
-<div id="result">Result will appear here...</div>
+<div id="loading">Thinking...</div>
+
+<div id="resultBox">
+    <div id="result">Result will appear here...</div>
+    <button id="copyBtn" onclick="copyResult()">Copy Result</button>
+</div>
 
 <script>
 
 const API = "https://conversion-auditor.onrender.com";
+
+function disableButtons(state) {
+    document.querySelectorAll("button").forEach(btn => {
+        if(btn.id !== "copyBtn") btn.disabled = state;
+    });
+}
+
+function showLoading(show) {
+    document.getElementById("loading").style.display = show ? "block" : "none";
+}
+
+function setResult(text) {
+    document.getElementById("result").innerText = text;
+}
+
+function getInput() {
+    return document.getElementById("input").value;
+}
+
+async function callAPI(endpoint, payload) {
+
+    disableButtons(true);
+    showLoading(true);
+    setResult("Working...");
+
+    try {
+        const res = await fetch(API + endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if(data.result) {
+            setResult(data.result);
+        } else if(data.detail) {
+            setResult("⚠ " + data.detail);
+        } else {
+            setResult(JSON.stringify(data, null, 2));
+        }
+
+    } catch(err) {
+        setResult("❌ Failed to connect to server");
+    }
+
+    disableButtons(false);
+    showLoading(false);
+}
 
 async function runLeadgen() {
     callAPI("/leadgen", {
@@ -93,30 +158,10 @@ async function runDeep() {
     });
 }
 
-function getInput() {
-    return document.getElementById("input").value;
-}
-
-async function callAPI(endpoint, data) {
-    setResult("Thinking...");
-
-    try {
-        const res = await fetch(API + endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
-
-        const json = await res.json();
-        setResult(json.result || JSON.stringify(json, null, 2));
-
-    } catch (err) {
-        setResult("Error: " + err.message);
-    }
-}
-
-function setResult(text) {
-    document.getElementById("result").innerText = text;
+function copyResult() {
+    navigator.clipboard.writeText(
+        document.getElementById("result").innerText
+    );
 }
 
 </script>
