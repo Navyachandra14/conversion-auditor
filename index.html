@@ -80,6 +80,7 @@
 </div>
 
 <script>
+
 let MASTER_KEY = "";
 
 function askKeyOnce() {
@@ -117,17 +118,13 @@ async function callAPI(endpoint, payload) {
     setResult("Working...");
 
     try {
-        askKeyOnce();
-
-const res = await fetch(API + endpoint, {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY
-    },
-    body: JSON.stringify(payload)
-});
-        };
+        const res = await fetch(API + endpoint, {
+            method: "POST",
+headers: {
+    "Content-Type": "application/json",
+    "X-Master-Key": MASTER_KEY
+},            body: JSON.stringify(payload)
+        });
 
         const data = await res.json();
 
