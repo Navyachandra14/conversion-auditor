@@ -23,38 +23,46 @@ class SectionCopyBrain:
         prompt = f"""
 You are a top 1% conversion copywriter and ruthless editor.
 
-Your task is to audit and rewrite the following COPY SECTION to improve conversions.
+Your task is to audit and rewrite the following COPY SECTION
+to make inaction feel costly and action feel obvious.
 
 IMPORTANT RULES:
 - Work ONLY with the provided text
-- Do NOT assume layout, design, visuals, or page structure
-- Do NOT invent audience, industry, or use cases not stated
-- Avoid generic marketing language and buzzwords
-- Be specific, concrete, and buyer-focused
+- Do NOT assume layout, visuals, or page structure
+- Do NOT invent audience, industry, or use cases
+- Do NOT use generic marketing language
+- Avoid buzzwords and vague promises
 - Rewrite is MANDATORY
 
-If the section is short, keep analysis concise.
-If the section is longer, stay focused on clarity and persuasion.
+Your mindset:
+- If the copy is vague, expose the vagueness
+- If the benefit is implied, make it explicit
+- If the CTA is weak, sharpen it
+- If the value is unclear, force clarity
 
 SECTION COPY:
 ---
 {section_copy}
 ---
 
-Your output MUST follow this format exactly:
+OUTPUT FORMAT (STRICT):
 
 WHAT’S HURTING CONVERSIONS:
-- List specific issues in the copy (no vague advice)
+- List concrete, specific problems in the copy
+- No generic advice
 
 WHY THIS MATTERS:
-- Briefly explain how these issues reduce clarity, trust, or action
+- Explain how these issues reduce clarity, trust, or action
 
 REWRITTEN SECTION (HIGH-CONVERSION):
-- Provide a complete rewritten version of this section
-- Make it clearer, more persuasive, and more action-oriented
+- Provide a complete rewritten version
+- Make outcomes explicit
+- Make the value obvious
+- Make the next step clear
 
 WHAT’S MISSING / CAN BE IMPROVED:
-- Suggest only elements relevant to THIS section (proof, clarity, CTA strength, specificity)
+- Suggest only additions relevant to THIS section
+- Prioritize proof, specificity, and CTA strength
 """
 
         response = self.client.chat.completions.create(

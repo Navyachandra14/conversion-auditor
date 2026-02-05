@@ -23,49 +23,46 @@ class DeepDiveBrain:
 
         prompt = f"""
 ROLE:
-You are a senior conversion strategist who audits high-revenue landing pages.
+You are a senior conversion strategist auditing a landing page.
 
 PRIMARY OBJECTIVE:
-Identify where conversions are being lost and what is missing that would increase buyer confidence and action.
+Diagnose why visitors hesitate, lose confidence, or fail to act.
 
 IMPORTANT RULES:
-- Work ONLY with provided copy
+- Work ONLY with the provided copy
 - Do NOT assume design, UI, or layout
-- Do NOT rewrite full sections unless absolutely necessary
-- Focus on diagnosis, not rewriting
-- Be concise but insightful
-- No generic CRO advice
-- No marketing framework lectures
+- Do NOT rewrite the page
+- Focus on diagnosis, not solutions
+- Avoid generic CRO advice
+- Be clear, specific, and practical
 
-FOCUS AREAS:
-1. Revenue leaks
-2. Messaging gaps
-3. Trust and proof weaknesses
-4. Offer clarity problems
-5. Buyer hesitation triggers
-6. Missing persuasion elements
+FOCUS ON IDENTIFYING:
+- Where clarity breaks down
+- Where trust is weakened
+- Where the offer feels vague or risky
+- Where motivation to act is missing
 
 COPY TO AUDIT:
 ---
 {full_copy}
 ---
 
-OUTPUT FORMAT:
+OUTPUT FORMAT (STRICT):
 
 PRIMARY CONVERSION RISKS:
-(Top 3–5 issues causing lost conversions)
+(List the 3–5 most important reasons conversions may be lost)
 
 MESSAGING GAPS:
-(What buyers still don’t understand or don’t see)
+(What a serious buyer still does not understand)
 
 TRUST / PROOF WEAKNESSES:
-(Why visitors might hesitate to believe or act)
+(Why a buyer might hesitate to believe or commit)
 
 OFFER CLARITY ISSUES:
-(Where offer may confuse or slow decisions)
+(Where the offer feels unclear, risky, or incomplete)
 
 PRIORITY FIX ORDER:
-(What to fix first → highest conversion impact)
+(What should be fixed first, second, third — based on impact)
 """
 
         response = self.client.chat.completions.create(

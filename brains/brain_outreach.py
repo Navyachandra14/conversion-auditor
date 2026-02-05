@@ -2,98 +2,71 @@ from openai import OpenAI
 
 
 class OutreachBrain:
+    """
+    Outreach Brain — Conversion Insight Outreach (V2)
+
+    Purpose:
+    Generate short, human, insight-led outreach messages
+    that point out ONE specific copy problem and invite curiosity.
+
+    This brain does NOT sell services.
+    It opens conversations.
+    """
 
     def __init__(self, api_key: str):
-        if not api_key:
-            raise ValueError("OpenAI API key required")
         self.client = OpenAI(api_key=api_key)
 
+        self.system_prompt = """
+You are a conversion-focused outreach strategist.
+
+You DO NOT write sales emails.
+You DO NOT pitch services.
+You DO NOT use marketing buzzwords.
+
+Your job:
+Point out ONE specific copy or messaging problem
+and explain why it hurts conversions.
+
+Rules:
+- Be specific. Never generic.
+- No praise fluff.
+- No hype.
+- No jargon.
+- No long paragraphs.
+- Sound like a CRO peer, not a marketer.
+
+Structure (MANDATORY):
+1. Specific observation about the copy
+2. Why this hurts conversions
+3. Soft curiosity-based invitation
+
+Constraints:
+- 80 to 140 words total
+- Plain, human language
+- Email-friendly formatting
+- No emojis
+- No bullet points
+
+If the input is vague:
+Infer the most likely conversion weakness
+and base the message on that.
+"""
+
     def generate_outreach(self, context_input: str, channel: str = "email") -> str:
-
-        if not context_input or len(context_input.strip()) < 10:
-            raise ValueError("Context input too short.")
-
-        prompt = f"""
-ROLE:
-You are an elite B2B outreach copywriter who writes short, human, observation-driven outreach messages.
-
-PRIMARY OBJECTIVE:
-Write an outreach message that proves you reviewed their copy by referencing ONE specific copy pattern from the context.
-
-MANDATORY LANGUAGE STRUCTURE:
-You MUST use one of these linguistic patterns:
-- talks about X but not Y
-- explains A but does not show B
-- mentions feature but not outcome
-- describes process but not result
-- says what you do but not what customer gets
-
-BANNED WORDS AND PHRASES:
-Do NOT use:
-broad
-vague
-open-ended
-unclear
-improve messaging
-could be stronger
-needs improvement
-optimize
-enhance
-elevate
-
-CONTEXT USAGE RULE:
-You MUST reference a real idea from the provided context.
-Do NOT invent problems.
-Do NOT generalize.
-
-TONE RULES:
-- Human
-- Natural
-- Helpful
-- Calm confidence
-- No marketing lecture
-- No audit explanation
-- No selling pressure
-
-LENGTH RULES:
-Email body must be 60–120 words maximum.
-No long paragraphs.
-
-CHANNEL:
-{channel}
-
-CONTEXT:
+        user_prompt = f"""
+Context:
 {context_input}
 
-OUTPUT CONTRACT:
-
-IF EMAIL:
-Subject: (max 8 words, natural)
-Body:
-- Short intro
-- One specific observation using required pattern
-- Soft offer or curiosity CTA
-- Close naturally
-
-IF LINKEDIN OR DM:
-Message:
-- One specific observation
-- One curiosity question
+Write a short outreach message following the rules exactly.
 """
 
         response = self.client.chat.completions.create(
-            model="gpt-4.1",
+            model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": "You produce precise outreach messages that feel personally observed and credible."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5
+            temperature=0.4,
         )
 
         return response.choices[0].message.content.strip()
