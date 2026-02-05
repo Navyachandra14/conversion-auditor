@@ -4,10 +4,14 @@
     <title>Conversion Auditor</title>
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             background: #0f172a;
             color: white;
             padding: 40px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
         }
 
         textarea {
@@ -39,17 +43,18 @@
         .outreach { background: #a855f7; }
         .deep { background: #f97316; }
 
+        #loading {
+            margin-top: 15px;
+            color: #38bdf8;
+            display: none;
+        }
+
         #resultBox {
             background: #020617;
             padding: 20px;
             border-radius: 8px;
             margin-top: 20px;
-        }
-
-        #loading {
-            color: #38bdf8;
-            margin-top: 10px;
-            display: none;
+            white-space: pre-wrap;
         }
 
         #copyBtn {
@@ -74,44 +79,43 @@
 
 <div id="loading">Thinking...</div>
 
-<div id="resultBox">
-    <div id="result">Result will appear here...</div>
-    <button id="copyBtn" onclick="copyResult()">Copy Result</button>
+<div id="resultBox" id="result">
+    Result will appear here...
 </div>
 
-<script>
+<button id="copyBtn" onclick="copyResult()">Copy Result</button>
 
+<script>
+const API = "https://conversion-auditor.onrender.com";
 let MASTER_KEY = "";
 
-function askKeyOnce() {
+// Ask once per session
+function ensureKey() {
     if (!MASTER_KEY) {
         MASTER_KEY = prompt("Enter master access key:");
     }
 }
-</script>
 
-const API = "https://conversion-auditor.onrender.com";
-const MASTER_KEY = "c40620f96afeb4ec689ab20c145514c4ead2f36bf7a2ce6340fb2dff01378af8";
-
-function disableButtons(state) {
-    document.querySelectorAll("button").forEach(btn => {
-        if(btn.id !== "copyBtn") btn.disabled = state;
-    });
+function setResult(text) {
+    document.getElementById("resultBox").innerText = text;
 }
 
 function showLoading(show) {
     document.getElementById("loading").style.display = show ? "block" : "none";
 }
 
-function setResult(text) {
-    document.getElementById("result").innerText = text;
-}
-
-function getInput() {
-    return document.getElementById("input").value;
+function disableButtons(state) {
+    document.querySelectorAll("button").forEach(btn => {
+        if (btn.id !== "copyBtn") btn.disabled = state;
+    });
 }
 
 async function callAPI(endpoint, payload) {
+    ensureKey();
+    if (!MASTER_KEY) {
+        setResult("❌ No master key provided");
+        return;
+    }
 
     disableButtons(true);
     showLoading(true);
@@ -120,23 +124,24 @@ async function callAPI(endpoint, payload) {
     try {
         const res = await fetch(API + endpoint, {
             method: "POST",
-headers: {
-    "Content-Type": "application/json",
-    "X-Master-Key": MASTER_KEY
-},            body: JSON.stringify(payload)
+            headers: {
+                "Content-Type": "application/json",
+                "X-Master-Key": MASTER_KEY
+            },
+            body: JSON.stringify(payload)
         });
 
         const data = await res.json();
 
-        if(data.result) {
+        if (data.result) {
             setResult(data.result);
-        } else if(data.detail) {
+        } else if (data.detail) {
             setResult("⚠ " + data.detail);
         } else {
             setResult(JSON.stringify(data, null, 2));
         }
 
-    } catch(err) {
+    } catch (e) {
         setResult("❌ Failed to connect to server");
     }
 
@@ -144,38 +149,37 @@ headers: {
     showLoading(false);
 }
 
-async function runLeadgen() {
+function runLeadgen() {
     callAPI("/leadgen", {
-        input_copy: getInput(),
+        input_copy: document.getElementById("input").value,
         goal: "lead_capture"
     });
 }
 
-async function runSection() {
+function runSection() {
     callAPI("/section-rewrite", {
-        section_copy: getInput()
+        section_copy: document.getElementById("input").value
     });
 }
 
-async function runOutreach() {
+function runOutreach() {
     callAPI("/outreach", {
-        context_input: getInput(),
+        context_input: document.getElementById("input").value,
         channel: "email"
     });
 }
 
-async function runDeep() {
+function runDeep() {
     callAPI("/deep-dive", {
-        full_copy: getInput()
+        full_copy: document.getElementById("input").value
     });
 }
 
 function copyResult() {
     navigator.clipboard.writeText(
-        document.getElementById("result").innerText
+        document.getElementById("resultBox").innerText
     );
 }
-
 </script>
 
 </body>
