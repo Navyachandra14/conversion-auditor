@@ -1,14 +1,16 @@
 """
-app.py — Production Hardened Version
+app.py — Final Locked Production Version
 """
 
-from fastapi.middleware.cors import CORSMiddleware
 import os
 import time
 import logging
-from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
 from dotenv import load_dotenv
+
+from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 # -----------------------
 # ENV LOAD
@@ -16,12 +18,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+MASTER_KEY = os.getenv("MASTER_KEY")
 
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY missing")
+    raise RuntimeError("OPENAI_API_KEY missing")
+
+if not MASTER_KEY:
+    raise RuntimeError("MASTER_KEY missing")
 
 # -----------------------
-# LOGGING SETUP
+# LOGGING
 # -----------------------
 if not os.path.exists("logs"):
     os.makedirs("logs")
@@ -41,7 +47,7 @@ from brains.brain_outreach import OutreachBrain
 from brains.brain_deep_dive import DeepDiveBrain
 
 # -----------------------
-# INIT BRAINS (ONCE)
+# INIT BRAINS
 # -----------------------
 leadgen_brain = LeadGenCopyBrain(OPENAI_API_KEY)
 section_brain = SectionCopyBrain(OPENAI_API_KEY)
@@ -55,15 +61,20 @@ app = FastAPI(
     title="Conversion Intelligence API",
     version="1.0.0",
 )
-# CORS (Allow Browser UI)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later you can restrict
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# -----------------------
+# MASTER KEY GUARD
+# -----------------------
+def require_master_key(x_master_key: str = Header(None)):
+    if x_master_key != MASTER_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 # -----------------------
 # REQUEST MODELS
@@ -83,100 +94,93 @@ class DeepDiveRequest(BaseModel):
     full_copy: str
 
 # -----------------------
-# GLOBAL REQUEST LOGGER
+# REQUEST LOGGER
 # -----------------------
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    start_time = time.time()
-
+    start = time.time()
     response = await call_next(request)
-
-    duration = round(time.time() - start_time, 3)
+    duration = round(time.time() - start, 3)
 
     logging.info(
         f"{request.method} {request.url.path} "
-        f"Status={response.status_code} "
-        f"Duration={duration}s"
+        f"{response.status_code} {duration}s"
     )
-
     return response
 
 # -----------------------
-# GLOBAL ERROR HANDLER
+# ERROR HANDLER
 # -----------------------
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logging.error(f"ERROR {request.url.path} → {str(exc)}")
-    return HTTPException(
+async def global_error_handler(request: Request, exc: Exception):
+    logging.error(f"{request.url.path} → {str(exc)}")
+    return JSONResponse(
         status_code=500,
-        detail="Internal server error. Logged."
+        content={"detail": "Internal server error"},
     )
 
 # -----------------------
-# HEALTH
+# HEALTH (NO LOCK)
 # -----------------------
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 # -----------------------
-# INPUT SIZE GUARD
+# SIZE GUARD
 # -----------------------
 def validate_size(text: str, max_chars=5000):
     if len(text) > max_chars:
-        raise HTTPException(
-            status_code=413,
-            detail="Input too large"
-        )
+        raise HTTPException(status_code=413, detail="Input too large")
 
 # -----------------------
-# LEADGEN
+# LEADGEN (LOCKED)
 # -----------------------
 @app.post("/leadgen")
-def leadgen(req: LeadGenRequest):
-    try:
-        validate_size(req.input_copy)
-        result = leadgen_brain.generate(req.input_copy, req.goal)
-        return {"result": result}
-    except Exception as e:
-        logging.error(f"Leadgen error → {str(e)}")
-        raise HTTPException(status_code=500, detail="Leadgen failed")
+def leadgen(
+    req: LeadGenRequest,
+    x_master_key: str = Header(None),
+):
+    require_master_key(x_master_key)
+    validate_size(req.input_copy)
+    return {"result": leadgen_brain.generate(req.input_copy, req.goal)}
 
 # -----------------------
-# SECTION
+# SECTION REWRITE (LOCKED)
 # -----------------------
 @app.post("/section-rewrite")
-def section_rewrite(req: SectionRequest):
-    try:
-        validate_size(req.section_copy)
-        result = section_brain.audit_and_rewrite(req.section_copy)
-        return {"result": result}
-    except Exception as e:
-        logging.error(f"Section error → {str(e)}")
-        raise HTTPException(status_code=500, detail="Section rewrite failed")
+def section_rewrite(
+    req: SectionRequest,
+    x_master_key: str = Header(None),
+):
+    require_master_key(x_master_key)
+    validate_size(req.section_copy)
+    return {"result": section_brain.audit_and_rewrite(req.section_copy)}
 
 # -----------------------
-# OUTREACH
+# OUTREACH (LOCKED)
 # -----------------------
 @app.post("/outreach")
-def outreach(req: OutreachRequest):
-    try:
-        validate_size(req.context_input)
-        result = outreach_brain.generate_outreach(req.context_input, req.channel)
-        return {"result": result}
-    except Exception as e:
-        logging.error(f"Outreach error → {str(e)}")
-        raise HTTPException(status_code=500, detail="Outreach failed")
+def outreach(
+    req: OutreachRequest,
+    x_master_key: str = Header(None),
+):
+    require_master_key(x_master_key)
+    validate_size(req.context_input)
+    return {
+        "result": outreach_brain.generate_outreach(
+            req.context_input, req.channel
+        )
+    }
 
 # -----------------------
-# DEEP DIVE
+# DEEP DIVE (LOCKED)
 # -----------------------
 @app.post("/deep-dive")
-def deep_dive(req: DeepDiveRequest):
-    try:
-        validate_size(req.full_copy, 12000)
-        result = deep_brain.deep_audit(req.full_copy)
-        return {"result": result}
-    except Exception as e:
-        logging.error(f"Deep dive error → {str(e)}")
-        raise HTTPException(status_code=500, detail="Deep audit failed")
+def deep_dive(
+    req: DeepDiveRequest,
+    x_master_key: str = Header(None),
+):
+    require_master_key(x_master_key)
+    validate_size(req.full_copy, 12000)
+    return {"result": deep_brain.deep_audit(req.full_copy)}
